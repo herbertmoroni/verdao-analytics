@@ -8,6 +8,9 @@ import pandas as pd
 # 1. Load the CSV
 df = pd.read_csv("data/campeonato-brasileiro-full.csv")
 
+# Convert "data" column from string "DD/MM/YYYY" to real datetime
+df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y')
+
 # 2. Basic shape
 print("=" * 60)
 print("DATASET OVERVIEW")
