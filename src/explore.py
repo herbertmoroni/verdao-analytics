@@ -1,7 +1,5 @@
-"""
-Exploration script — verify the dataset is what we expect.
-Run from the project root: python src/explore.py
-"""
+# Exploration script — verify the dataset is what we expect.
+# Run from the project root: python src/explore.py
 
 import pandas as pd
 

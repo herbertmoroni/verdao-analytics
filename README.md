@@ -1,34 +1,67 @@
 # Overview
 
-{Important!  Do not say in this section that this is college assignment.  Talk about what you are trying to accomplish as a software engineer to further your learning.}
+My goal with this project was to learn the fundamentals of three core Python libraries for data analysis: Pandas for data manipulation, Matplotlib for visualization, and NumPy for numerical operations.
 
-{Provide a description of the data set that you are analyzing.  Include the link of where you obtained the data.}
-
-{Describe your purpose for writing this software to analyze the data.}
-
-{Provide a link to your YouTube demonstration.  It should be a 4-5 minute demo of the data set, the questions and answers, the code running and a walkthrough of the code.}
+To make the learning meaningful, I chose a dataset I genuinely care about: the Campeonato Brasileiro de Futebol on Kaggle, containing 9,165 matches from the Brazilian top-flight league between 2003 and 2025. The analysis focuses on Sociedade Esportiva Palmeiras (810 matches across 22 seasons) and tests two narratives commonly heard in football discourse: that fixture congestion hurts performance, and that titles are decided by results against direct rivals. Both findings ended up challenging the original hypotheses.
 
 [Software Demo Video](http://youtube.link.goes.here)
 
 # Data Analysis Results
 
-{List the questions and the answers you found by doing this analysis.}
+### Question 1: Does fixture congestion hurt Palmeiras?
+
+Surprisingly, no. Palmeiras' win rate is virtually identical with short rest (≤3 days, 51.0%) and normal rest (4–6 days, 50.2%), but drops sharply with long rest (7+ days, 40.3%). This contradicts the common narrative that congested fixtures hurt performance. A plausible explanation is that long rest periods often coincide with international breaks or post-Libertadores recovery — periods where the team loses key players to national teams or has its rhythm disrupted. The data suggests Palmeiras performs best when in continuous match rhythm, not when rested.
+
+### Question 2: Where does Palmeiras drop points they shouldn't?
+
+In Palmeiras' near-miss seasons (finishing 2nd–4th, 9 seasons total), 42.3% of dropped points came from matches against bottom-half opponents. In championship seasons (4 seasons), that figure dropped to 36.6%. Even more striking, the loss rate against bottom-half teams was 44% in near-miss seasons compared to just 30% in title-winning seasons. The data supports the theory that championships in the Brazilian league are decided more by avoiding upsets against weaker teams than by results in marquee matches against direct rivals.
+
+### Visualization
+
+Both findings are presented as a side-by-side bar chart saved to `output/palmeiras_analysis.png`. The left chart shows win rate by rest category; the right chart shows the distribution of dropped points by opponent strength, split between champion and near-miss seasons. Each bar is annotated with percentages and sample sizes.
 
 # Development Environment
 
-{Describe the tools that you used to develop the software}
+The software was developed in Visual Studio Code on Windows, using Python 3.13 and an isolated virtual environment (venv) to keep dependencies reproducible across machines. Git and GitHub were used for version control.
 
-{Describe the programming language that you used and any libraries.}
+The programming language is Python. The main libraries used are:
+
+* Pandas — for loading the CSV, filtering, sorting, datetime conversion, grouping, aggregation, and joining derived standings back to the match data
+* Matplotlib — for producing the side-by-side bar chart that visualizes both findings
+* NumPy — used indirectly by Pandas and Matplotlib for numerical operations
 
 # Useful Websites
 
-{Make a list of websites that you found helpful in this project}
-* [Web Site Name](http://url.link.goes.here)
-* [Web Site Name](http://url.link.goes.here)
+* [Pandas — Getting Started Tutorials](https://pandas.pydata.org/docs/getting_started/index.html)
+* [Pandas — 10 Minutes to Pandas](https://pandas.pydata.org/docs/user_guide/10min.html)
+* [Matplotlib — Pyplot Tutorial](https://matplotlib.org/stable/tutorials/pyplot.html)
+* [Kaggle — Campeonato Brasileiro de Futebol Dataset](https://www.kaggle.com/datasets/adaoduque/campeonato-brasileiro-de-futebol)
+* [Real Python — Working with Date and Time in Pandas](https://realpython.com/pandas-python-explore-dataset/)
 
 # Future Work
 
-{Make a list of things that you need to fix, improve, and add in the future.}
-* Item 1
-* Item 2
-* Item 3
+* Address the hidden-matches limitation in Question 1 by combining the Brasileirão dataset with cup and continental match data (Copa do Brasil, Copa Libertadores, Mundial, Paulistão) to calculate true rest days across all competitions, not just league fixtures
+* Address the hindsight-bias limitation in Question 2 by calculating standings at the time of each match rather than using final season standings, giving a more accurate classification of opponent strength at the moment each match was played
+* Investigate fixture congestion in more depth — specifically whether consecutive short-rest matches compound (2 in a row may be fine, but 3, 4, or 5 back-to-back games with ≤3 days rest could reveal a fatigue threshold the current analysis misses)
+* Separate "long rest" matches into international break gaps vs. natural calendar gaps, to better understand why long rest correlates with worse performance
+* Add statistical significance testing (chi-square or t-test) to confirm whether the observed differences are statistically meaningful or could be noise
+
+# AI Disclosure
+
+I used AI to help structure my Pandas code, especially around the standings calculation in Question 2. Building a final league table from raw match results required combining home and away matches into a single long-format DataFrame, grouping by season and team, and ranking within each season — none of which I had done before. AI helped me understand the groupby + rank pattern and walked me through why a long-format DataFrame was easier to work with than trying to handle home and away separately.
+
+I also asked for help with the date conversion logic. The dataset stores dates as strings in DD/MM/YYYY format, which Pandas was sorting alphabetically rather than chronologically. Once I caught the issue (my "first match" was in 2021 instead of 2003), AI helped me apply pd.to_datetime with the correct format string — a small fix, but a meaningful lesson in always inspecting data types before trusting them.
+
+For the Matplotlib chart, AI helped me with the side-by-side subplot layout, the grouped bar chart pattern for Question 2, and the annotation logic that places percentage labels above each bar. I refined the colors, captions, and overall styling iteratively until the chart told the story clearly.
+
+Throughout the project, I followed the same scientific method I committed to at the start of the course: forming a hypothesis before each question, testing it with code, and recording the outcome — even when (especially when) the data contradicted my hypothesis. 
+
+I can explain every line of the final code and justify the analytical decisions.
+
+Since English is not my first language (Portuguese is my native language), I also used AI to proofread the README.
+
+# Limitations
+
+Hindsight bias in opponent classification: Question 2 classifies opponents as "top half" or "bottom half" based on each team's final position in that season. This means a team that started strongly but collapsed in the second half of the season is classified as bottom-half for the entire year, even for matches played early when they were performing well. A more rigorous version of this analysis would use the standings at the time of each match. The current approach is a reasonable approximation but introduces a small amount of hindsight bias that should be acknowledged.
+
+Limitation — Hidden matches between Brasileirão fixtures: This dataset only contains Brasileirão matches, but Palmeiras also plays in Copa do Brasil, Copa Libertadores, Mundial, and state championships. When calculating "days of rest" between matches, the script measures gaps between league matches only — meaning a 7-day gap in the data might actually contain a midweek cup match the dataset doesn't include. So "long rest" in this analysis often signals teams playing other competitions, not teams that were truly rested. This may help explain Question 1's surprising finding that long rest correlates with worse performance: those gaps frequently coincide with parallel campaigns in continental tournaments.
