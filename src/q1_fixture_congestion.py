@@ -47,6 +47,8 @@ def points_earned(row):
 palmeiras['points'] = palmeiras.apply(points_earned, axis=1)
 
 # 7. Bucket Matches by Rest Days
+# Thresholds: <=3 days = back-to-back (midweek + weekend), 4-6 = standard
+# weekly rhythm, 7+ = international break or calendar gap.
 def rest_bucket(days):
     if days <= 3:
         return '1. Short rest (<=3 days)'

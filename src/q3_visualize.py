@@ -5,17 +5,19 @@
 #Run from project root: python src/q3_visualize.py
 
 
+import os
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Load the Data
+# 1. Load the Data
 df = pd.read_csv("data/campeonato-brasileiro-full.csv")
 df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y')
 df['season'] = df['data'].dt.year
 
 
 
-# Q1 ANALYSIS — Fixture congestion
+# 2. Q1 Analysis — Fixture congestion
 palmeiras = df[(df['mandante'] == 'Palmeiras') | (df['visitante'] == 'Palmeiras')].copy()
 palmeiras = palmeiras.sort_values('data').reset_index(drop=True)
 # Consecutive difference gives days elapsed since the previous Palmeiras match
@@ -33,6 +35,8 @@ def points_earned(row):
 
 palmeiras['points'] = palmeiras.apply(points_earned, axis=1)
 
+# Thresholds: <=3 days = back-to-back (midweek + weekend), 4-6 = standard
+# weekly rhythm, 7+ = international break or calendar gap.
 def rest_bucket(days):
     if days <= 3:
         return 'Short rest\n(<=3 days)'
@@ -56,7 +60,7 @@ q1_summary = q1_summary.set_index('rest_category').loc[order_q1].reset_index()
 
 
 
-# Q2 ANALYSIS — Dropped points vs opponent strength
+# 3. Q2 Analysis — Dropped points vs opponent strength
 def points_for_team(row, team_col):
     if row['vencedor'] == row[team_col]:
         return 3
@@ -83,6 +87,9 @@ standings['position'] = standings.groupby('season')['points'].rank(
 ).astype(int)
 
 palmeiras_seasons = standings[standings['team'] == 'Palmeiras'].copy()
+# Top-4 = "title contender" season: 1st = Champion, 2nd-4th = Near-miss.
+# Seasons below 4th are excluded because the gap to the title is too large
+# to meaningfully compare dropped-point patterns.
 qualifying = palmeiras_seasons[palmeiras_seasons['position'] <= 4].copy()
 qualifying['season_type'] = qualifying['position'].apply(
     lambda p: 'Champion (1st)' if p == 1 else 'Near-miss (2nd-4th)'
@@ -132,7 +139,7 @@ q2_summary['pct'] = q2_summary.apply(
 
 
 
-# BUILD THE CHART
+# 4. Build the Chart
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 fig.suptitle('Palmeiras Performance Analysis — Brasileirao Serie A (2003-2025)',
              fontsize=15, fontweight='bold', y=1.02)
@@ -176,7 +183,6 @@ categories = ['Top half\n(1-10)', 'Bottom half\n(11-20)']
 champion_pct = [champion.loc[c, 'pct'] for c in categories]
 near_miss_pct = [near_miss.loc[c, 'pct'] for c in categories]
 
-import numpy as np
 x = np.arange(len(categories))
 width = 0.35
 
@@ -207,9 +213,8 @@ ax2.text(0.5, -0.18,
          color='#444')
 
 
-# Save the chart
+# 5. Save and Display
 plt.tight_layout()
-import os
 os.makedirs('output', exist_ok=True)
 output_path = 'output/palmeiras_analysis.png'
 plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
