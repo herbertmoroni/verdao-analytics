@@ -1,6 +1,6 @@
 # Overview
 
-Football clubs increasingly rely on data to make decisions — from squad selection to tactical adjustments. This project analyzes 22 seasons of the Campeonato Brasileiro de Futebol (9,165 matches, 2003–2025) to answer two questions about Sociedade Esportiva Palmeiras that real club analytics departments actually investigate: whether fixture congestion affects performance, and where title-contending teams lose points they shouldn't. Both findings ended up challenging the original hypotheses.
+Soccer clubs increasingly rely on data to make decisions — from squad selection to tactical adjustments. This project analyzes 22 seasons of the Campeonato Brasileiro de Futebol (9,165 matches, 2003–2025) to answer two questions about Sociedade Esportiva Palmeiras that real club analytics departments actually investigate: whether fixture congestion affects performance, and where title-contending teams lose points they shouldn't. Both findings ended up challenging the original hypotheses.
 
 [Software Demo Video](http://youtube.link.goes.here)
 
