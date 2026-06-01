@@ -1,23 +1,17 @@
-#Stretch challenge: Visualize Q1 and Q2 findings as side-by-side charts.
-
-#Output: output/palmeiras_analysis.png
-
-#Run from project root: python src/q3_visualize.py
-
+# Visualizes Palmeiras' performance patterns in the Brasileirão (2003-2025).
+# Produces two charts: fixture congestion impact and dropped-points distribution.
+#
+# Run from project root: python src/visualize.py
 
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from utils import load_data, get_match_points, build_standings
 
-# 1. Load the Data
-df = pd.read_csv("data/campeonato-brasileiro-full.csv")
-df['data'] = pd.to_datetime(df['data'], format='%d/%m/%Y')
-df['season'] = df['data'].dt.year
+df = load_data()
 
-
-
-# 2. Q1 Analysis — Fixture congestion
+# --- Fixture Congestion Analysis ---
 palmeiras = df[(df['mandante'] == 'Palmeiras') | (df['visitante'] == 'Palmeiras')].copy()
 palmeiras = palmeiras.sort_values('data').reset_index(drop=True)
 # Consecutive difference gives days elapsed since the previous Palmeiras match
@@ -25,15 +19,7 @@ palmeiras['days_rest'] = palmeiras['data'].diff().dt.days
 palmeiras = palmeiras.dropna(subset=['days_rest'])
 palmeiras['days_rest'] = palmeiras['days_rest'].astype(int)
 
-def points_earned(row):
-    if row['vencedor'] == 'Palmeiras':
-        return 3
-    elif row['vencedor'] == '-':
-        return 1
-    else:
-        return 0
-
-palmeiras['points'] = palmeiras.apply(points_earned, axis=1)
+palmeiras['points'] = palmeiras.apply(lambda r: get_match_points(r, 'Palmeiras'), axis=1)
 
 # Thresholds: <=3 days = back-to-back (midweek + weekend), 4-6 = standard
 # weekly rhythm, 7+ = international break or calendar gap.
@@ -47,75 +33,44 @@ def rest_bucket(days):
 
 palmeiras['rest_category'] = palmeiras['days_rest'].apply(rest_bucket)
 
-q1_summary = palmeiras.groupby('rest_category').agg(
+congestion_summary = palmeiras.groupby('rest_category').agg(
     matches=('points', 'count'),
     avg_points=('points', 'mean'),
     wins=('points', lambda s: (s == 3).sum()),
 ).reset_index()
-q1_summary['win_rate'] = (q1_summary['wins'] / q1_summary['matches'] * 100).round(1)
+congestion_summary['win_rate'] = (congestion_summary['wins'] / congestion_summary['matches'] * 100).round(1)
 
 # Force the order short -> normal -> long
-order_q1 = ['Short rest\n(<=3 days)', 'Normal rest\n(4-6 days)', 'Long rest\n(7+ days)']
-q1_summary = q1_summary.set_index('rest_category').loc[order_q1].reset_index()
+order = ['Short rest\n(<=3 days)', 'Normal rest\n(4-6 days)', 'Long rest\n(7+ days)']
+congestion_summary = congestion_summary.set_index('rest_category').loc[order].reset_index()
 
 
-
-# 3. Q2 Analysis — Dropped points vs opponent strength
-def points_for_team(row, team_col):
-    if row['vencedor'] == row[team_col]:
-        return 3
-    elif row['vencedor'] == '-':
-        return 1
-    else:
-        return 0
-
-# Each match appears once as home and once as away; union both sides to get
-# each team's full point tally per season for final standings.
-home = df[['season', 'mandante']].copy()
-home['team'] = df['mandante']
-home['points'] = df.apply(lambda r: points_for_team(r, 'mandante'), axis=1)
-
-away = df[['season', 'visitante']].copy()
-away['team'] = df['visitante']
-away['points'] = df.apply(lambda r: points_for_team(r, 'visitante'), axis=1)
-
-all_team_matches = pd.concat([home[['season', 'team', 'points']],
-                              away[['season', 'team', 'points']]])
-standings = all_team_matches.groupby(['season', 'team'])['points'].sum().reset_index()
-standings['position'] = standings.groupby('season')['points'].rank(
-    method='min', ascending=False
-).astype(int)
+# --- Dropped Points Analysis ---
+standings = build_standings(df)
 
 palmeiras_seasons = standings[standings['team'] == 'Palmeiras'].copy()
+qualifying = palmeiras_seasons[palmeiras_seasons['position'] <= 4].copy()
 # Top-4 = "title contender" season: 1st = Champion, 2nd-4th = Near-miss.
 # Seasons below 4th are excluded because the gap to the title is too large
 # to meaningfully compare dropped-point patterns.
-qualifying = palmeiras_seasons[palmeiras_seasons['position'] <= 4].copy()
 qualifying['season_type'] = qualifying['position'].apply(
     lambda p: 'Champion (1st)' if p == 1 else 'Near-miss (2nd-4th)'
 )
 
-qualifying_seasons_list = qualifying['season'].tolist()
 palmeiras_matches = df[
     ((df['mandante'] == 'Palmeiras') | (df['visitante'] == 'Palmeiras'))
-    & (df['season'].isin(qualifying_seasons_list))
+    & (df['season'].isin(qualifying['season'].tolist()))
 ].copy()
 
 def get_opponent(row):
     return row['visitante'] if row['mandante'] == 'Palmeiras' else row['mandante']
 
-def palmeiras_points(row):
-    if row['vencedor'] == 'Palmeiras':
-        return 3
-    elif row['vencedor'] == '-':
-        return 1
-    else:
-        return 0
-
 palmeiras_matches['opponent'] = palmeiras_matches.apply(get_opponent, axis=1)
-palmeiras_matches['points'] = palmeiras_matches.apply(palmeiras_points, axis=1)
+palmeiras_matches['points'] = palmeiras_matches.apply(lambda r: get_match_points(r, 'Palmeiras'), axis=1)
 palmeiras_matches['points_dropped'] = 3 - palmeiras_matches['points']
 
+# The merge uses both 'season' and 'opponent' as keys, so a team's strength
+# is judged by where they actually finished that specific year — not overall.
 opp_positions = standings.rename(columns={'team': 'opponent', 'position': 'opp_position'})
 palmeiras_matches = palmeiras_matches.merge(
     opp_positions[['season', 'opponent', 'opp_position']],
@@ -128,37 +83,36 @@ palmeiras_matches = palmeiras_matches.merge(
     qualifying[['season', 'season_type']], on='season'
 )
 
-# Calculate % of dropped points per (season_type, opp_category)
 dropped_only = palmeiras_matches[palmeiras_matches['points'] < 3]
-q2_summary = dropped_only.groupby(['season_type', 'opp_category'])['points_dropped'].sum().reset_index()
-totals = q2_summary.groupby('season_type')['points_dropped'].sum().to_dict()
-q2_summary['pct'] = q2_summary.apply(
+dropped_summary = dropped_only.groupby(['season_type', 'opp_category'])['points_dropped'].sum().reset_index()
+totals = dropped_summary.groupby('season_type')['points_dropped'].sum().to_dict()
+# Normalize within each season type so Champion and Near-miss are comparable
+# despite having different total dropped-point counts.
+dropped_summary['pct'] = dropped_summary.apply(
     lambda r: round(100 * r['points_dropped'] / totals[r['season_type']], 1),
     axis=1
 )
 
 
-
-# 4. Build the Chart
+# --- Build Charts ---
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 fig.suptitle('Palmeiras Performance Analysis — Brasileirao Serie A (2003-2025)',
              fontsize=15, fontweight='bold', y=1.02)
 
-# LEFT CHART: Q1 
+# LEFT: Fixture Congestion
 ax1 = axes[0]
-colors_q1 = ['#2E7D32', '#66BB6A', '#C62828']  # green, light green, red
-bars1 = ax1.bar(q1_summary['rest_category'], q1_summary['win_rate'],
-                color=colors_q1, edgecolor='black', linewidth=0.8)
+colors = ['#2E7D32', '#66BB6A', '#C62828']  # green, light green, red
+bars1 = ax1.bar(congestion_summary['rest_category'], congestion_summary['win_rate'],
+                color=colors, edgecolor='black', linewidth=0.8)
 
-ax1.set_title('Q1: Does fixture congestion hurt Palmeiras?',
+ax1.set_title('Does fixture congestion hurt Palmeiras?',
               fontsize=12, fontweight='bold', pad=12)
 ax1.set_ylabel('Win rate (%)', fontsize=11)
 ax1.set_ylim(0, 65)
 ax1.grid(axis='y', alpha=0.3, linestyle='--')
 ax1.set_axisbelow(True)
 
-# Annotate bars with win rate and match count
-for bar, row in zip(bars1, q1_summary.itertuples()):
+for bar, row in zip(bars1, congestion_summary.itertuples()):
     height = bar.get_height()
     ax1.text(bar.get_x() + bar.get_width()/2, height + 1,
              f'{row.win_rate}%', ha='center', fontweight='bold', fontsize=11)
@@ -166,18 +120,22 @@ for bar, row in zip(bars1, q1_summary.itertuples()):
              f'n={row.matches}', ha='center', color='white',
              fontweight='bold', fontsize=10)
 
+short_wr = congestion_summary.loc[congestion_summary['rest_category'].str.startswith('Short'), 'win_rate'].values[0]
+long_wr = congestion_summary.loc[congestion_summary['rest_category'].str.startswith('Long'), 'win_rate'].values[0]
 ax1.text(0.5, -0.18,
-         'Surprise: Palmeiras performs BEST with short rest.\n'
-         'Long rest (7+ days) shows the lowest win rate.',
-         transform=ax1.transAxes, ha='center', fontsize=9, style='italic',
-         color='#444')
+         f'Surprise: Palmeiras performs BEST with short rest ({short_wr}%).\n'
+         f'Long rest (7+ days) shows the lowest win rate ({long_wr}%).',
+         transform=ax1.transAxes, ha='center', fontsize=9, style='italic', color='#444')
 
 
-# RIGHT CHART: Q2 
+# RIGHT: Dropped Points
 ax2 = axes[1]
 
-champion = q2_summary[q2_summary['season_type'] == 'Champion (1st)'].set_index('opp_category')
-near_miss = q2_summary[q2_summary['season_type'] == 'Near-miss (2nd-4th)'].set_index('opp_category')
+champion = dropped_summary[dropped_summary['season_type'] == 'Champion (1st)'].set_index('opp_category')
+near_miss = dropped_summary[dropped_summary['season_type'] == 'Near-miss (2nd-4th)'].set_index('opp_category')
+
+n_champion = qualifying[qualifying['season_type'] == 'Champion (1st)']['season'].nunique()
+n_near_miss = qualifying[qualifying['season_type'] == 'Near-miss (2nd-4th)']['season'].nunique()
 
 categories = ['Top half\n(1-10)', 'Bottom half\n(11-20)']
 champion_pct = [champion.loc[c, 'pct'] for c in categories]
@@ -187,11 +145,11 @@ x = np.arange(len(categories))
 width = 0.35
 
 bars_c = ax2.bar(x - width/2, champion_pct, width,
-                 label='Champion seasons (4)', color='#FFB300', edgecolor='black', linewidth=0.8)
+                 label=f'Champion seasons ({n_champion})', color='#FFB300', edgecolor='black', linewidth=0.8)
 bars_n = ax2.bar(x + width/2, near_miss_pct, width,
-                 label='Near-miss seasons (9)', color='#5C6BC0', edgecolor='black', linewidth=0.8)
+                 label=f'Near-miss seasons ({n_near_miss})', color='#5C6BC0', edgecolor='black', linewidth=0.8)
 
-ax2.set_title('Q2: Where does Palmeiras drop points?',
+ax2.set_title('Where does Palmeiras drop points?',
               fontsize=12, fontweight='bold', pad=12)
 ax2.set_ylabel('% of total dropped points', fontsize=11)
 ax2.set_xticks(x)
@@ -206,14 +164,14 @@ for bars, values in [(bars_c, champion_pct), (bars_n, near_miss_pct)]:
         ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
                  f'{val}%', ha='center', fontweight='bold', fontsize=10)
 
+bottom_champ = champion.loc['Bottom half\n(11-20)', 'pct']
+bottom_near = near_miss.loc['Bottom half\n(11-20)', 'pct']
 ax2.text(0.5, -0.18,
-         'In near-miss seasons, more points are dropped\n'
-         'to bottom-half teams (42.3%) than in title years (36.6%).',
-         transform=ax2.transAxes, ha='center', fontsize=9, style='italic',
-         color='#444')
+         f'In near-miss seasons, more points are dropped\n'
+         f'to bottom-half teams ({bottom_near}%) than in title years ({bottom_champ}%).',
+         transform=ax2.transAxes, ha='center', fontsize=9, style='italic', color='#444')
 
 
-# 5. Save and Display
 plt.tight_layout()
 os.makedirs('output', exist_ok=True)
 output_path = 'output/palmeiras_analysis.png'
