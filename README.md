@@ -1,6 +1,6 @@
 # Overview
 
-Soccer clubs increasingly rely on data to make decisions — from squad selection to tactical adjustments. This project analyzes 22 seasons of the Campeonato Brasileiro de Futebol (9,165 matches, 2003–2025) to answer two questions about Sociedade Esportiva Palmeiras that real club analytics departments actually investigate: whether fixture congestion affects performance, and where title-contending teams lose points they shouldn't. Both findings ended up challenging the original hypotheses.
+Palmeiras is my favorite team, and I follow every season closely. Two narratives kept coming up: coach Abel Ferreira regularly complains about fixture congestion and short rest, and after our near-miss last season, fans blamed the losses on tough matches against top rivals. I wanted to know if the data actually supported either story. It didn't — at least not the way people assumed.
 
 [Software Demo Video](https://youtu.be/EPdhjf6vZqE)
 
