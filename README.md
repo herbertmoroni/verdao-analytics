@@ -2,7 +2,6 @@
 
 Palmeiras is my favorite team, and I follow every season closely. Two narratives kept coming up: coach Abel Ferreira regularly complains about fixture congestion and short rest, and after our near-miss last season, fans blamed the losses on tough matches against top rivals. I wanted to know if the data actually supported either story. It didn't — at least not the way people assumed.
 
-[Software Demo Video](https://youtu.be/EPdhjf6vZqE)
 
 # Data Analysis Results
 
