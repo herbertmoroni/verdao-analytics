@@ -96,17 +96,11 @@ The programming language is Python. The main libraries used are:
 
 # AI Disclosure
 
-I used AI to help structure my Pandas code, especially around the standings calculation for the dropped-points analysis. Building a final league table from raw match results required combining home and away matches into a single long-format DataFrame, grouping by season and team, and ranking within each season — none of which I had done before. AI helped me understand the groupby + rank pattern and walked me through why a long-format DataFrame was easier to work with than trying to handle home and away separately.
+I used AI to help structure my Pandas code, especially around the standings calculation for the dropped-points analysis. Building a final league table from raw match results required combining home and away matches into a single long-format DataFrame, grouping by season and team, and ranking within each season.
 
-I also asked for help with the date conversion logic. The dataset stores dates as strings in DD/MM/YYYY format, which Pandas was sorting alphabetically rather than chronologically. Once I caught the issue (my "first match" was in 2021 instead of 2003), AI helped me apply pd.to_datetime with the correct format string — a small fix, but a meaningful lesson in always inspecting data types before trusting them.
-
-For the Matplotlib chart, AI helped me with the side-by-side subplot layout, the grouped bar chart pattern for the dropped-points finding, and the annotation logic that places percentage labels above each bar. I refined the colors, captions, and overall styling iteratively until the chart told the story clearly.
-
-Throughout the project, I followed the scientific method as a guiding principle: forming a hypothesis before each question, testing it with code, and recording the outcome — even when (especially when) the data contradicted my hypothesis.
+For the Matplotlib chart, AI helped me with the side-by-side subplot layout. I refined the colors, captions, and overall styling iteratively until the chart told the story clearly.
 
 I can explain every line of the final code and justify the analytical decisions.
-
-Since English is not my first language (Portuguese is my native language), I also used AI to proofread the README.
 
 # Limitations
 
